@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <string.h>
 
 #define FILENAME "users.txt"
@@ -20,6 +21,15 @@ typedef enum
     Delete_user,
     Exit
 } Menuchoice;
+
+int typeCheck(int value){
+    if(value != 1){
+        printf("\nInvalid input..\n");
+        while (getchar() != '\n');
+        return 0;
+    }
+    return 1;
+}
 
 FILE *isFileEmpty(FILE *file)
 {
@@ -68,31 +78,34 @@ void createUser()
     do
     {
         printf("\nEnter User ID: ");
-        scanf("%d", &user.id);
-
+        if (!typeCheck(scanf("%d", &user.id)))
+        {
+            continue;
+        }
         idExists = isIdExists(user.id);
         if (idExists)
         {
-            printf("\nError: User ID %d already exists. Please enter an unique ID.\n", user.id);
+            printf("\nError: User ID %d already exists. Please enter a unique ID.\n", user.id);
         }
     } while (idExists);
 
     getchar();
-    printf("Enter Name: ");
+    printf("\nEnter Name: ");
     fgets(user.name, sizeof(user.name), stdin);
     user.name[strcspn(user.name, "\n")] = '\0';
-    printf("Enter Age: ");
-    scanf("%d", &user.age);
-
-    if (user.age > 0)
-    {
-        fwrite(&user, sizeof(User), 1, file);
-        printf("\nUser added successfully.....\n");
-    }
-    else
-    {
-        printf("\nInvalid age input...\n");
-    }
+    
+    do{
+        printf("\nEnter Age: ");
+        if (!typeCheck(scanf("%d", &user.age)) || user.age <= 0)
+        {
+            continue;
+        }
+        break;
+    } while(1);
+    
+    fwrite(&user, sizeof(User), 1, file);
+    printf("\nUser added successfully.....\n");
+   
     fclose(file);
 }
 
@@ -130,8 +143,15 @@ void updateUser()
         return;
 
     int id;
-    printf("\nEnter the ID of the user you want to update: ");
-    scanf("%d", &id);
+
+    do{
+        printf("\nEnter the ID of the user you want to update: ");
+        if (!typeCheck(scanf("%d", &id)))
+        {
+            continue;
+        }
+        break;
+    }while(1);
 
     User user;
     int found = 0;
@@ -143,14 +163,20 @@ void updateUser()
             found = 1;
 
             int choice;
-            printf("\nWhat would you like to update?\n");
-            printf("1. Name\n");
-            printf("2. Age\n");
-            printf("3. Both Name and Age\n");
-            printf("Enter your choice (1/2/3): ");
-            scanf("%d", &choice);
+            do {
+                printf("\nWhat would you like to update?\n");
+                printf("1. Name\n");
+                printf("2. Age\n");
+                printf("3. Both Name and Age\n");
+                printf("Enter your choice (1/2/3): ");
+                if (!typeCheck(scanf("%d", &choice)) || (choice < 1 || choice > 3))
+                {
+                    continue;
+                }
+                break;
+            } while (1);
 
-            getchar();
+            getchar(); // Clear newline left by scanf
 
             if (choice == 1 || choice == 3)
             {
@@ -161,8 +187,16 @@ void updateUser()
 
             if (choice == 2 || choice == 3)
             {
-                printf("Enter new Age: ");
-                scanf("%d", &user.age);
+                do {
+                    printf("Enter new Age: ");
+                    if (!typeCheck(scanf("%d", &user.age)) || user.age <= 0)
+                    {
+                        printf("\nInvalid input. Please enter a valid positive age.\n");
+                        while (getchar() != '\n'); // Clear input buffer
+                        continue;
+                    }
+                    break;
+                } while (1);
             }
 
             fseek(file, -sizeof(User), SEEK_CUR);
@@ -200,8 +234,14 @@ void deleteUser()
     }
 
     int idToDelete;
-    printf("Enter the User ID to delete: ");
-    scanf("%d", &idToDelete);
+    do {
+        printf("Enter the User ID to delete: ");
+        if (!typeCheck(scanf("%d", &idToDelete)))
+        {
+            continue;
+        }
+        break;
+    } while(1);
 
     User user;
     int found = 0;
@@ -243,6 +283,9 @@ void createFileIfNotExists()
             printf("\nFile created successfully.\n");
             fclose(file);
         }
+        else{
+            printf("\nError in creating file...\n");
+        }
     }
     else
     {
@@ -253,8 +296,8 @@ void createFileIfNotExists()
 int main()
 {
     createFileIfNotExists();
-
     int choice;
+    
     while (1)
     {
         printf("\n--- Menu ---\n");
@@ -264,7 +307,10 @@ int main()
         printf("4. Delete User\n");
         printf("5. Exit\n");
         printf("Enter your choice: ");
-        scanf("%d", &choice);
+
+        if (!typeCheck(scanf("%d", &choice))){
+            continue;
+        }
 
         switch (choice)
         {
@@ -284,7 +330,7 @@ int main()
             printf("\nExiting...\n");
             exit(0);
         default:
-            printf("Invalid choice! Try again.\n");
+            printf("\nInvalid choice! Try again.\n");
         }
     }
     return 0;
