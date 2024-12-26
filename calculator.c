@@ -1,124 +1,124 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
 
-// Function prototypes
-int evaluateExpression(const char* expr, int len);
-int isValidExpression(const char* expr);
-int precedence(char op);
-int applyOperation(int a, int b, char op);
+#define LEN 50
 
-int main() {
-    char input[100];
-    printf("Enter an expression: ");
-    fgets(input, sizeof(input), stdin);
+int get_precedence(char operator_symbol) {
+    if (operator_symbol == '+' || operator_symbol == '-') return 1;
+    if (operator_symbol == '*' || operator_symbol == '/') return 2;
+    return 0;
+}
 
-    // Remove trailing newline if it exists
-    int len = strlen(input);
-    if (input[len - 1] == '\n') {
-        input[len - 1] = '\0';
+int apply_operation(int first_number, int second_number, char operator_symbol) {
+    switch (operator_symbol) {
+        case '+': return first_number + second_number;
+        case '-': return first_number - second_number;
+        case '*': return first_number * second_number;
+        case '/':
+            if (second_number == 0) {
+                printf("Error: Division by zero\n");
+                return 0;
+            }
+            return first_number / second_number;
+        default: return 0;
     }
+}
 
-    // Validate the input expression
-    if (!isValidExpression(input)) {
-        printf("Error: Invalid expression.\n");
+
+int evaluate_expression(const char *expression, int *error_flag) {
+    int numbers[LEN], numbers_top = -1;
+    char operators[LEN], operators_top = -1;
+
+    for (int i = 0; expression[i] != '\0'; i++) {
+        char current = expression[i];
+
+        if (isspace(current)) continue;
+
+        if (current == '-' && (i == 0 || strchr("+-*/", expression[i - 1]) != NULL)) {
+            i++;
+            if (!isdigit(expression[i])) {
+                *error_flag = 2;
+                return 0;
+            }
+            int number = 0;
+            while (isdigit(expression[i])) {
+                number = number * 10 + (expression[i] - '0');
+                i++;
+            }
+            i--;
+            numbers[++numbers_top] = -number;
+            continue;
+        }
+
+        if (isdigit(current)) {
+            int number = 0;
+            while (isdigit(expression[i])) {
+                number = number * 10 + (expression[i] - '0');
+                i++;
+            }
+            i--;
+            numbers[++numbers_top] = number;
+            continue;
+        }
+
+        if (current == '+' || current == '-' || current == '*' || current == '/') {
+            while (operators_top >= 0 && get_precedence(operators[operators_top]) >= get_precedence(current)) {
+                char op = operators[operators_top--];
+                int num2 = numbers[numbers_top--];
+                int num1 = numbers[numbers_top--];
+
+                if (op == '/' && num2 == 0) {
+                    *error_flag = 1;
+                    return 0;
+                }
+
+                numbers[++numbers_top] = apply_operation(num1, num2, op);
+            }
+            operators[++operators_top] = current;
+            continue;
+        }
+
+        *error_flag = 2;
         return 0;
     }
 
-    int result = evaluateExpression(input, len);
+    while (operators_top >= 0) {
+        char op = operators[operators_top--];
+        int num2 = numbers[numbers_top--];
+        int num1 = numbers[numbers_top--];
 
-    if (result == 1) {
+        if (op == '/' && num2 == 0) {
+            *error_flag = 1;
+            return 0;
+        }
+
+        numbers[++numbers_top] = apply_operation(num1, num2, op);
+    }
+
+    return numbers[numbers_top];
+}
+
+int main() {
+    char expression[LEN];
+    printf("Enter a mathematical expression: ");
+    fgets(expression, LEN, stdin);
+
+    size_t len = strlen(expression);
+    if (len > 0 && expression[len - 1] == '\n') {
+        expression[len - 1] = '\0';
+    }
+
+    int error_flag = 0;
+    int result = evaluate_expression(expression, &error_flag);
+
+    if (error_flag == 1) {
         printf("Error: Division by zero.\n");
+    } else if (error_flag == 2) {
+        printf("Error: Invalid expression.\n");
     } else {
         printf("Result: %d\n", result);
     }
 
     return 0;
-}
-
-// Check if the expression is valid
-int isValidExpression(const char* expr) {
-    for (int i = 0; expr[i] != '\0'; i++) {
-        // if the char is not digit, space or any operator then invalid character
-        if (!isdigit(expr[i]) && !isspace(expr[i]) && expr[i] != '+' &&
-            expr[i] != '-' && expr[i] != '*' && expr[i] != '/') {
-            return 0; // Invalid character
-        }
-    }
-    return 1; // Valid expression
-}
-
-// Determine operator precedence
-int precedence(char op) {
-    if (op == '+' || op == '-') return 1;
-    if (op == '*' || op == '/') return 2;
-    return 0;
-}
-
-// Apply an operation to two operands
-int applyOperation(int a, int b, char op) {
-    switch (op) {
-        case '+': return a + b;
-        case '-': return a - b;
-        case '*': return a * b;
-        case '/': return b != 0 ? a / b : -1; // Return -1 for division by zero
-    }
-    return 0;
-}
-
-// Evaluate the mathematical expression
-int evaluateExpression(const char* expr, int len) {
-    int values[100]; // Stack for numbers
-    char ops[100];   // Stack for operators
-    int valTop = -1; // Values stack pointer
-    int opsTop = -1; // Operators stack pointer
-
-    for (int i = 0; expr[i] != '\0'; i++) {
-        // Skip whitespaces
-        if (isspace(expr[i])) continue;
-
-        // If the current character is a number
-        if (isdigit(expr[i])) {
-            int val = 0;
-
-            // Extract the full number
-            while (i < len && isdigit(expr[i])) {
-                val = (val * 10) + (expr[i] - '0');
-                i++;
-            }
-            i--; // Step back since the loop advances an extra time
-            values[++valTop] = val;
-        }
-        // If the current character is an operator
-        else if (expr[i] == '+' || expr[i] == '-' || expr[i] == '*' || expr[i] == '/') {
-            while (opsTop != -1 && precedence(ops[opsTop]) >= precedence(expr[i])) {
-                int b = values[valTop--];
-                int a = values[valTop--];
-                char op = ops[opsTop--];
-
-                if (op == '/' && b == 0) {
-                    return 1; // Division by zero error
-                }
-
-                values[++valTop] = applyOperation(a, b, op);
-            }
-            ops[++opsTop] = expr[i];
-        } 
-    }
-
-    // Apply remaining operators to remaining values
-    while (opsTop != -1) {
-        int b = values[valTop--];
-        int a = values[valTop--];
-        char op = ops[opsTop--];
-
-        if (op == '/' && b == 0) {
-            return 1; // Division by zero error
-        }
-
-        values[++valTop] = applyOperation(a, b, op);
-    }
-
-    return values[valTop]; // The final result
 }
